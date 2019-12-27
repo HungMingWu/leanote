@@ -10,18 +10,18 @@ var gulpSequence = require('gulp-sequence');
 
 var fs = require('fs');
 
-var leanoteBase = './';
+var leanoteBase = '.';
 var base = leanoteBase + '/public'; // public base
 var noteDev = leanoteBase + '/app/views/note/note-dev.html';
 var noteProBase = leanoteBase + '/app/views/note';
 
-var messagesPath = leanoteBase + 'messages';
+var messagesPath = leanoteBase + '/messages';
 
 // 合并Js, 这些js都是不怎么修改, 且是依赖
 // 840kb, 非常耗时!!
 gulp.task('concatDepJs', function() {
     var jss = [
-        'js/jquery-1.9.0.min.js',
+        'js/jquery-3.4.1.min.js',
         'js/jquery.ztree.all-3.5-min.js',
         // 'tinymce/tinymce.full.min.js', // 使用打成的包, 加载速度快
         // 'libs/ace/ace.js',
@@ -157,7 +157,7 @@ gulp.task('devToProHtml', function() {
 
 // 只获取需要js i18n的key
 var path = require('path');
-gulp.task('i18n', function() {
+gulp.task('i18n', async function() {
     var keys = {};
     var reg = /getMsg\(["']+(.+?)["']+/g;
     // {rule: "required", msg: "inputNewPassword"},
@@ -276,13 +276,19 @@ gulp.task('i18n', function() {
 
         // 写入到文件中
         var toFilename = targetFilename + '.' + lang + '.js';
-        fs.writeFile(base + '/js/i18n/' + toFilename, str);
+        fs.writeFile(base + '/js/i18n/' + toFilename, str, (err) => {
+		if (err) throw err;
+		console.log(`writeFile ${base}/js/i18n/${toFilename} success`);
+	});
     }
 
     function genTinymceLang(lang) {
-        var msgs = getAllMsgs(leanoteBase + 'messages/' + lang + '/tinymce_editor.conf');
+        var msgs = getAllMsgs(leanoteBase + '/messages/' + lang + '/tinymce_editor.conf');
         var str = 'tinymce.addI18n("' + lang + '",' + JSON.stringify(msgs) + ');';
-        fs.writeFile(base + '/tinymce/langs/' + lang + '.js', str);
+        fs.writeFile(base + '/tinymce/langs/' + lang + '.js', str, (err) => {
+		if (err) throw err;
+		console.log(`writeFile ${base}/tinymce/langs/${lang}.js success`);
+	});
     }
 
     var langs = getAllLangs();
@@ -310,7 +316,7 @@ gulp.task('concatAlbumJs', function() {
         .pipe(gulp.dest(base + '/album/css'));
 
     var jss = [
-        'js/jquery-1.9.0.min.js',
+        'js/jquery-3.4.1.min.js',
         'js/bootstrap-min.js',
         'js/plugins/libs-min/fileupload.js',
         'js/jquery.pagination.js',
@@ -365,7 +371,7 @@ gulp.task('concatCss', function() {
 
 // mincss
 var minifycss = require('gulp-minify-css');
-gulp.task('minifycss', function() {
+gulp.task('minifycss', async function() {
     gulp.src(base + '/css/bootstrap.css')
         .pipe(rename({suffix: '-min'}))
         .pipe(minifycss())
@@ -404,6 +410,6 @@ gulp.task('minifycss', function() {
 });
 
 
-gulp.task('concat', ['concatDepJs', 'concatAppJs', /* 'concatMarkdownJs', */'concatMarkdownJsV2']);
-gulp.task('html', ['devToProHtml']);
-gulp.task('default', ['concat', 'plugins', 'minifycss', 'i18n', 'concatAlbumJs', 'html']);
+gulp.task('concat', gulp.series('concatDepJs', 'concatAppJs', /* 'concatMarkdownJs', */'concatMarkdownJsV2'));
+gulp.task('html', gulp.series('devToProHtml'));
+gulp.task('default', gulp.series('concat', 'plugins', 'minifycss', 'i18n', 'concatAlbumJs', 'html'));
